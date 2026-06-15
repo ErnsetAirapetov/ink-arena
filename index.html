@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <title>InkArena</title>
+    <style>
+      html, body { margin: 0; height: 100%; background: #11131a; overflow: hidden; touch-action: none; }
+      #game { display: block; width: 100vw; height: 100vh; }
+      #hud {
+        position: fixed; top: 12px; left: 12px; color: #e8eaf0;
+        font-family: system-ui, sans-serif; font-size: 16px; line-height: 1.5;
+        pointer-events: none; text-shadow: 0 1px 2px #000;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="game"></canvas>
+    <div id="hud"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
