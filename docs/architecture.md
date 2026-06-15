@@ -13,17 +13,21 @@
 - `spells/combo.ts` — `findCombo(a, b)`: поиск комбо в любом порядке.
 - `spells/cast.ts` — `resolveCast(results)`: одиночное/комбо/осечка + сила.
 - `effects/effects.ts` — система частиц, цвета по id.
-- `combat/combat.ts` — чистая логика боя: `Combatant` (HP), `damageFor`, `applyDamage`, `respawn`.
-- `combat/scene.ts` — `CombatScene`: отрисовка игрока, манекена, HP-бара и анимаций попадания.
-- `ui/hud.ts` — текстовая обратная связь (`showCast`).
+- `combat/combat.ts` — чистая логика боя: `Combatant` (HP), `sizeFactor`, `damageFor`, `speedFactor`, `flightTimeMs`, `applyDamage`, `respawn`.
+- `combat/projectile.ts` — `ProjectileSystem`: снаряды по Безье-траектории, прилёты, отрисовка.
+- `combat/player.ts` — статус щита игрока (`castShield`, `tickPlayer`, `isShielded`).
+- `combat/scene.ts` — `CombatScene`: игрок (с аурой щита), манекен, HP-бар, анимации.
+- `ui/hud.ts` — текстовая обратная связь (`showCast`, `showAttack`, `showShield`).
 - `config.ts` — крутилки баланса (`minScore`, `clusterGapPx`, `combat`).
 - `main.ts` — буфер линий, каст по пробелу, бой, отрисовка.
 
 ## Поток данных
 ввод указателя → `StrokeRecorder` → буфер линий → (пробел) →
 `clusterStrokes` → `recognize` по группам → `resolveCast` →
-`damageFor` → `applyDamage` → `CombatScene` + `EffectSystem` + `Hud`.
+размер(bbox)→`sizeFactor` → щит (`castShield`) или снаряд
+(`ProjectileSystem.spawn`) → прилёт → `damageFor` → `applyDamage` →
+`CombatScene` + `EffectSystem` + `Hud`.
 
 ## Что тестируется
-Чистые модули (geometry, stroke, clustering, recognizer, combo, cast, combat) —
-юнит-тестами Vitest. Визуальные модули — вручную в браузере.
+Чистые модули (geometry, stroke, clustering, recognizer, combo, cast, combat,
+projectile, player) — юнит-тестами Vitest. Визуальные модули — вручную в браузере.
