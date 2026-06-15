@@ -8,8 +8,8 @@ export function createPlayer(): Player {
   return { shieldMs: 0 };
 }
 
-/** Поднять щит на durationMs. */
-export function castShield(p: Player, durationMs: number): Player {
+/** Поднять щит на durationMs (текущее состояние игнорируется — щит обновляется). */
+export function castShield(_p: Player, durationMs: number): Player {
   return { shieldMs: durationMs };
 }
 

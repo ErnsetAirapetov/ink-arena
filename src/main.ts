@@ -8,8 +8,11 @@ import { EffectSystem, colorFor } from './effects/effects';
 import { Hud } from './ui/hud';
 import { GuideOverlay } from './ui/guide';
 import { CONFIG } from './config';
-import { createCombatant, damageFor, applyDamage, respawn } from './combat/combat';
+import { boundingBox } from './geometry';
+import { createCombatant, applyDamage, respawn, sizeFactor, damageFor, flightTimeMs } from './combat/combat';
+import { createPlayer, castShield, tickPlayer } from './combat/player';
 import { CombatScene } from './combat/scene';
+import { ProjectileSystem } from './combat/projectile';
 
 const canvas = document.getElementById('game') as HTMLCanvasElement;
 const ctx = canvas.getContext('2d')!;
@@ -29,7 +32,9 @@ const strokes: Stroke[] = []; // буфер завершённых линий д
 
 // --- combat ---
 let dummy = createCombatant(CONFIG.combat.dummyHp);
+let player = createPlayer();
 const scene = new CombatScene();
+const projectiles = new ProjectileSystem();
 let respawnAt: number | null = null;
 // --- /combat ---
 
@@ -63,17 +68,39 @@ function cast(): void {
   }
 
   const outcome = resolveCast(results);
-  hud.showCast(outcome);
 
-  // --- combat: нанести урон манекену ---
-  if (outcome.kind !== 'fizzle' && dummy.alive) {
-    const dmg = damageFor(outcome.power);
-    dummy = applyDamage(dummy, dmg);
-    scene.hit(dmg);
-    effects.burst(scene.target.x, scene.target.y, colorFor(outcome.id), outcome.power);
-    if (!dummy.alive) respawnAt = performance.now() + CONFIG.combat.respawnMs;
+  if (outcome.kind === 'fizzle') {
+    hud.showCast(outcome);
+    strokes.length = 0;
+    return;
   }
-  // --- /combat ---
+
+  // размер заклинания — макс. сторона bbox всех точек
+  const all = strokes.flatMap((s) => s.points);
+  const box = boundingBox(all);
+  const spellSizePx = Math.max(box.maxX - box.minX, box.maxY - box.minY);
+  const sf = sizeFactor(spellSizePx);
+  const accuracy = outcome.power / 100;
+
+  // щит (одиночный) — самобаф, без снаряда
+  if (outcome.kind === 'single' && outcome.id === 'shield') {
+    player = castShield(player, CONFIG.combat.shieldMs);
+    hud.showShield(CONFIG.combat.shieldMs);
+    strokes.length = 0;
+    return;
+  }
+
+  // атака — снаряд в манекен
+  const damage = damageFor(sf, accuracy);
+  const flightMs = flightTimeMs(sf);
+  projectiles.spawn({
+    from: scene.origin,
+    to: scene.target,
+    flightMs,
+    damage,
+    colorId: outcome.id,
+  });
+  hud.showAttack(outcome, sf, damage, flightMs);
 
   strokes.length = 0; // очистить буфер и холст
 }
@@ -83,17 +110,30 @@ function loop(now: number): void {
   const dt = now - last;
   last = now;
 
-  // --- combat: авто-респавн манекена ---
+  // авто-респавн манекена
   if (respawnAt !== null && now >= respawnAt) {
     dummy = respawn(dummy);
     respawnAt = null;
   }
-  // --- /combat ---
+
+  // тик щита
+  player = tickPlayer(player, dt);
+
+  // продвинуть снаряды; на каждый прилёт — урон по манекену
+  for (const a of projectiles.update(dt)) {
+    if (dummy.alive) {
+      dummy = applyDamage(dummy, a.damage);
+      scene.hit(a.damage);
+      effects.burst(a.x, a.y, colorFor(a.colorId), Math.min(100, a.damage + 20));
+      if (!dummy.alive) respawnAt = now + CONFIG.combat.respawnMs;
+    }
+  }
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   guide.draw(ctx, { w: canvas.width, h: canvas.height });
   scene.update(dt);
-  scene.draw(ctx, dummy, { w: canvas.width, h: canvas.height });
+  scene.draw(ctx, dummy, player, { w: canvas.width, h: canvas.height });
+  projectiles.draw(ctx);
   effects.update(dt);
   effects.draw(ctx);
   for (const s of strokes) drawInk(ctx, s.points);
