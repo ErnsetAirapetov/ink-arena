@@ -3,14 +3,21 @@ import { drawInk } from './drawing/canvas-renderer';
 import { recognize, type MatchResult } from './recognition/recognizer';
 import { GLYPHS } from './recognition/glyphs';
 import { clusterStrokes } from './recognition/clustering';
-import { resolveCast } from './spells/cast';
+import { parseSpell } from './spells/spell-types';
 import { EffectSystem, colorFor } from './effects/effects';
 import { Hud } from './ui/hud';
 import { GuideOverlay } from './ui/guide';
 import { CONFIG } from './config';
 import { boundingBox } from './geometry';
 import { createCombatant, applyDamage, respawn, sizeFactor, damageFor, flightTimeMs } from './combat/combat';
-import { createPlayer, castShield, tickPlayer } from './combat/player';
+import {
+  createPlayer,
+  castShield,
+  tickPlayer,
+  applyDamageToPlayer,
+  respawnPlayer,
+} from './combat/player';
+import { createDummyAi, tickDummyAi, telegraphElement } from './combat/dummy-ai';
 import { CombatScene } from './combat/scene';
 import { ProjectileSystem } from './combat/projectile';
 
@@ -28,14 +35,16 @@ window.addEventListener('resize', resize);
 const recorder = new StrokeRecorder();
 const effects = new EffectSystem();
 const guide = new GuideOverlay();
-const strokes: Stroke[] = []; // буфер завершённых линий до каста
+const strokes: Stroke[] = [];
 
 // --- combat ---
 let dummy = createCombatant(CONFIG.combat.dummyHp);
-let player = createPlayer();
+let player = createPlayer(CONFIG.combat.playerHp);
+let ai = createDummyAi();
 const scene = new CombatScene();
 const projectiles = new ProjectileSystem();
-let respawnAt: number | null = null;
+let dummyRespawnAt: number | null = null;
+let playerRespawnAt: number | null = null;
 // --- /combat ---
 
 canvas.addEventListener('pointerdown', (e) => {
@@ -67,42 +76,42 @@ function cast(): void {
     if (match) results.push(match);
   }
 
-  const outcome = resolveCast(results);
+  const spell = parseSpell(results);
 
-  if (outcome.kind === 'fizzle') {
-    hud.showCast(outcome);
+  if (spell.kind === 'fizzle') {
+    hud.showFizzle(spell.reason);
     strokes.length = 0;
     return;
   }
 
-  // размер заклинания — макс. сторона bbox всех точек
+  if (spell.kind === 'shield') {
+    player = castShield(player, CONFIG.combat.shieldMs, spell.element);
+    hud.showShield(spell.element, CONFIG.combat.shieldMs);
+    strokes.length = 0;
+    return;
+  }
+
+  // атака или комбо → снаряд в манекен
   const all = strokes.flatMap((s) => s.points);
   const box = boundingBox(all);
   const spellSizePx = Math.max(box.maxX - box.minX, box.maxY - box.minY);
   const sf = sizeFactor(spellSizePx);
-  const accuracy = outcome.power / 100;
-
-  // щит (одиночный) — самобаф, без снаряда
-  if (outcome.kind === 'single' && outcome.id === 'shield') {
-    player = castShield(player, CONFIG.combat.shieldMs);
-    hud.showShield(CONFIG.combat.shieldMs);
-    strokes.length = 0;
-    return;
-  }
-
-  // атака — снаряд в манекен
+  const accuracy = spell.power / 100;
   const damage = damageFor(sf, accuracy);
   const flightMs = flightTimeMs(sf);
+  const colorId = spell.kind === 'combo' ? spell.id : spell.element;
   projectiles.spawn({
     from: scene.origin,
     to: scene.target,
     flightMs,
     damage,
-    colorId: outcome.id,
+    colorId,
+    target: 'dummy',
+    element: spell.kind === 'attack' ? spell.element : '',
   });
-  hud.showAttack(outcome, sf, damage, flightMs);
+  hud.showAttack(spell, sf, damage, flightMs);
 
-  strokes.length = 0; // очистить буфер и холст
+  strokes.length = 0;
 }
 
 let last = performance.now();
@@ -110,22 +119,51 @@ function loop(now: number): void {
   const dt = now - last;
   last = now;
 
-  // авто-респавн манекена
-  if (respawnAt !== null && now >= respawnAt) {
+  // респавны
+  if (dummyRespawnAt !== null && now >= dummyRespawnAt) {
     dummy = respawn(dummy);
-    respawnAt = null;
+    dummyRespawnAt = null;
+  }
+  if (playerRespawnAt !== null && now >= playerRespawnAt) {
+    player = respawnPlayer(player);
+    playerRespawnAt = null;
   }
 
   // тик щита
   player = tickPlayer(player, dt);
 
-  // продвинуть снаряды; на каждый прилёт — урон по манекену
+  // ИИ манекена: телеграф и выстрел по игроку
+  const tick = tickDummyAi(ai, dt);
+  ai = tick.ai;
+  scene.setTelegraph(telegraphElement(ai));
+  if (tick.fire && dummy.alive) {
+    projectiles.spawn({
+      from: scene.target,
+      to: scene.origin,
+      flightMs: CONFIG.combat.referenceFlightMs,
+      damage: CONFIG.combat.dummyDamage,
+      colorId: tick.fire.element,
+      target: 'player',
+      element: tick.fire.element,
+    });
+  }
+
+  // прилёты снарядов
   for (const a of projectiles.update(dt)) {
-    if (dummy.alive) {
+    if (a.target === 'player') {
+      if (player.alive) {
+        const before = player.hp;
+        player = applyDamageToPlayer(player, a.damage, a.element);
+        const dealt = before - player.hp;
+        scene.hitPlayer(dealt);
+        effects.burst(a.x, a.y, colorFor(a.colorId), Math.min(100, dealt + 20));
+        if (!player.alive) playerRespawnAt = now + CONFIG.combat.playerRespawnMs;
+      }
+    } else if (dummy.alive) {
       dummy = applyDamage(dummy, a.damage);
       scene.hit(a.damage);
       effects.burst(a.x, a.y, colorFor(a.colorId), Math.min(100, a.damage + 20));
-      if (!dummy.alive) respawnAt = now + CONFIG.combat.respawnMs;
+      if (!dummy.alive) dummyRespawnAt = now + CONFIG.combat.respawnMs;
     }
   }
 
