@@ -1,5 +1,6 @@
 import { CONFIG } from '../config';
 import { findCombo } from './combo';
+import { affinity } from '../combat/elements';
 import type { MatchResult } from '../recognition/recognizer';
 
 export type CastOutcome =
@@ -22,6 +23,7 @@ export function resolveCast(results: MatchResult[]): CastOutcome {
   const [a, b] = results;
   const combo = findCombo(a.glyph.id, b.glyph.id);
   if (!combo) return { kind: 'fizzle', reason: 'Эти глифы не сочетаются' };
-  const power = Math.round(((a.score + b.score) / 2) * 100);
+  const mult = affinity(combo.parts[0], combo.parts[1]);
+  const power = Math.round(((a.score + b.score) / 2) * 100 * mult);
   return { kind: 'combo', id: combo.id, name: combo.name, power };
 }

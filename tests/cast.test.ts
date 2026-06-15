@@ -26,9 +26,9 @@ describe('resolveCast', () => {
     expect(resolveCast([m('fire', 'Огонь', 0.2)]).kind).toBe('fizzle');
   });
 
-  it('два сочетающихся глифа → комбо со средней силой', () => {
+  it('два сочетающихся глифа → комбо с силой, умноженной на сродство', () => {
     const r = resolveCast([m('fire', 'Огонь', 0.8), m('air', 'Воздух', 0.6)]);
-    expect(r).toEqual({ kind: 'combo', id: 'firestorm', name: 'Огненный вихрь', power: 70 });
+    expect(r).toEqual({ kind: 'combo', id: 'firestorm', name: 'Огненный вихрь', power: 105 });
   });
 
   it('комбо порядок-независимо', () => {
