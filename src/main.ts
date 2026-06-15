@@ -9,14 +9,8 @@ import { Hud } from './ui/hud';
 import { GuideOverlay } from './ui/guide';
 import { CONFIG } from './config';
 import { boundingBox } from './geometry';
-import { createCombatant, applyDamage, respawn, sizeFactor, damageFor, flightTimeMs } from './combat/combat';
-import {
-  createPlayer,
-  castShield,
-  tickPlayer,
-  applyDamageToPlayer,
-  respawnPlayer,
-} from './combat/player';
+import { createCombatant, applyDamage, respawn, applyAttack, sizeFactor, damageFor, flightTimeMs } from './combat/combat';
+import { addShield, tickStatuses } from './combat/status';
 import { createDummyAi, tickDummyAi, telegraphElement } from './combat/dummy-ai';
 import { CombatScene } from './combat/scene';
 import { ProjectileSystem } from './combat/projectile';
@@ -39,7 +33,7 @@ const strokes: Stroke[] = [];
 
 // --- combat ---
 let dummy = createCombatant(CONFIG.combat.dummyHp);
-let player = createPlayer(CONFIG.combat.playerHp);
+let player = createCombatant(CONFIG.combat.playerHp);
 let ai = createDummyAi();
 const scene = new CombatScene();
 const projectiles = new ProjectileSystem();
@@ -85,7 +79,10 @@ function cast(): void {
   }
 
   if (spell.kind === 'shield') {
-    player = castShield(player, CONFIG.combat.shieldMs, spell.element);
+    player = {
+      ...player,
+      statuses: addShield(player.statuses, spell.element, CONFIG.combat.shieldAbsorb, CONFIG.combat.shieldMs),
+    };
     hud.showShield(spell.element, CONFIG.combat.shieldMs);
     strokes.length = 0;
     return;
@@ -125,12 +122,13 @@ function loop(now: number): void {
     dummyRespawnAt = null;
   }
   if (playerRespawnAt !== null && now >= playerRespawnAt) {
-    player = respawnPlayer(player);
+    player = respawn(player);
     playerRespawnAt = null;
   }
 
-  // тик щита
-  player = tickPlayer(player, dt);
+  // тик статусов
+  player = { ...player, statuses: tickStatuses(player.statuses, dt) };
+  dummy = { ...dummy, statuses: tickStatuses(dummy.statuses, dt) };
 
   // ИИ манекена: телеграф и выстрел по игроку
   const tick = tickDummyAi(ai, dt);
@@ -153,7 +151,7 @@ function loop(now: number): void {
     if (a.target === 'player') {
       if (player.alive) {
         const before = player.hp;
-        player = applyDamageToPlayer(player, a.damage, a.element);
+        player = applyAttack(player, a.damage, a.element);
         const dealt = before - player.hp;
         scene.hitPlayer(dealt);
         effects.burst(a.x, a.y, colorFor(a.colorId), Math.min(100, dealt + 20));

@@ -1,26 +1,28 @@
 import { CONFIG } from '../config';
 import { affinity } from './elements';
+import { absorbIncoming, type Status } from './status';
 
 export interface Combatant {
   hp: number;
   maxHp: number;
   alive: boolean;
+  statuses: Status[];
 }
 
 /** Создать бойца с полным HP. */
 export function createCombatant(maxHp: number): Combatant {
-  return { hp: maxHp, maxHp, alive: true };
+  return { hp: maxHp, maxHp, alive: true, statuses: [] };
 }
 
-/** Применить урон. Возвращает нового бойца, вход не мутирует. */
+/** Применить плоский урон (без статусов). Возвращает нового бойца. */
 export function applyDamage(c: Combatant, amount: number): Combatant {
   const hp = Math.max(0, Math.min(c.maxHp, c.hp - amount));
-  return { hp, maxHp: c.maxHp, alive: hp > 0 };
+  return { ...c, hp, alive: hp > 0 };
 }
 
-/** Воскресить с полным HP. */
+/** Воскресить с полным HP и очищенными статусами. */
 export function respawn(c: Combatant): Combatant {
-  return { hp: c.maxHp, maxHp: c.maxHp, alive: true };
+  return { ...c, hp: c.maxHp, alive: true, statuses: [] };
 }
 
 /** Множитель размера: размер каста относительно эталона, обрезан по границам. */
@@ -59,4 +61,11 @@ export function blockedDamage(
     Math.min(CONFIG.combat.maxBlockFraction, CONFIG.combat.shieldBlock * mult),
   );
   return Math.round(rawDamage * (1 - blockFraction));
+}
+
+/** Применить входящую атаку через статусы (щит со сродством). */
+export function applyAttack(c: Combatant, raw: number, attackElement: string): Combatant {
+  const { statuses, hpDamage } = absorbIncoming(c.statuses, raw, attackElement);
+  const hp = Math.max(0, c.hp - hpDamage);
+  return { ...c, hp, statuses, alive: hp > 0 };
 }

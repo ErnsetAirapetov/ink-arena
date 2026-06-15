@@ -1,5 +1,5 @@
 import type { Combatant } from './combat';
-import { type Player, isShielded } from './player';
+import { shieldInfo } from './status';
 import { colorFor } from '../effects/effects';
 
 interface Floater {
@@ -75,7 +75,7 @@ export class CombatScene {
     this.floaters = this.floaters.filter((f) => f.life > 0);
   }
 
-  draw(ctx: CanvasRenderingContext2D, dummy: Combatant, player: Player, size: Size): void {
+  draw(ctx: CanvasRenderingContext2D, dummy: Combatant, player: Combatant, size: Size): void {
     const playerX = size.w * 0.2;
     const dummyX = size.w * 0.75;
     const groundY = size.h * 0.7;
@@ -109,11 +109,12 @@ export class CombatScene {
     ctx: CanvasRenderingContext2D,
     x: number,
     groundY: number,
-    player: Player,
+    player: Combatant,
   ): void {
     // аура щита позади фигуры
-    if (isShielded(player)) {
-      const sec = Math.ceil(player.shieldMs / 1000);
+    const sh = shieldInfo(player.statuses);
+    if (sh) {
+      const sec = Math.ceil(sh.durationMs / 1000);
       ctx.save();
       ctx.globalAlpha = 0.2;
       ctx.fillStyle = '#c0a7ff';
@@ -129,7 +130,7 @@ export class CombatScene {
       ctx.fillStyle = '#c0a7ff';
       ctx.font = 'bold 13px system-ui, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(`щит ${sec}с`, x, groundY - 116);
+      ctx.fillText(`щит ${sh.absorb} · ${sec}с`, x, groundY - 116);
       ctx.restore();
     }
 

@@ -10,8 +10,8 @@ import {
 } from '../src/combat/combat';
 
 describe('combat — бойцы', () => {
-  it('createCombatant — полный HP и жив', () => {
-    expect(createCombatant(100)).toEqual({ hp: 100, maxHp: 100, alive: true });
+  it('createCombatant — полный HP, жив, без статусов', () => {
+    expect(createCombatant(100)).toEqual({ hp: 100, maxHp: 100, alive: true, statuses: [] });
   });
 
   it('applyDamage — обрезает HP по 0 и помечает мёртвым', () => {
@@ -26,9 +26,9 @@ describe('combat — бойцы', () => {
     expect(orig.hp).toBe(100);
   });
 
-  it('respawn — восстанавливает полный HP', () => {
+  it('respawn — полный HP и очищенные статусы', () => {
     const dead = applyDamage(createCombatant(100), 200);
-    expect(respawn(dead)).toEqual({ hp: 100, maxHp: 100, alive: true });
+    expect(respawn(dead)).toEqual({ hp: 100, maxHp: 100, alive: true, statuses: [] });
   });
 });
 
@@ -83,5 +83,22 @@ describe('blockedDamage — поглощение щитом', () => {
 
   it('совпадение стихий щита и атаки → базовый блок', () => {
     expect(blockedDamage('fire', 100, 'fire')).toBe(40);
+  });
+});
+
+import { applyAttack } from '../src/combat/combat';
+import { addShield } from '../src/combat/status';
+
+describe('combat — applyAttack через статусы', () => {
+  it('без щита — полный урон', () => {
+    const c = applyAttack(createCombatant(100), 30, 'fire');
+    expect(c.hp).toBe(70);
+  });
+
+  it('со щитом — урон гасится пулом', () => {
+    let c = createCombatant(100);
+    c = { ...c, statuses: addShield(c.statuses, null, 40, 10000) };
+    const hit = applyAttack(c, 100, 'fire'); // пул 40 → по HP 60
+    expect(hit.hp).toBe(40);
   });
 });
