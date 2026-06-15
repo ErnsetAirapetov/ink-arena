@@ -6,6 +6,7 @@ import { clusterStrokes } from './recognition/clustering';
 import { resolveCast } from './spells/cast';
 import { EffectSystem, colorFor } from './effects/effects';
 import { Hud } from './ui/hud';
+import { GuideOverlay } from './ui/guide';
 import { CONFIG } from './config';
 import { createCombatant, damageFor, applyDamage, respawn } from './combat/combat';
 import { CombatScene } from './combat/scene';
@@ -23,6 +24,7 @@ window.addEventListener('resize', resize);
 
 const recorder = new StrokeRecorder();
 const effects = new EffectSystem();
+const guide = new GuideOverlay();
 const strokes: Stroke[] = []; // буфер завершённых линий до каста
 
 // --- combat ---
@@ -45,6 +47,9 @@ window.addEventListener('keydown', (e) => {
   if (e.code === 'Space') {
     e.preventDefault();
     cast();
+  }
+  if (e.code === 'KeyG') {
+    guide.toggle();
   }
 });
 
@@ -86,6 +91,7 @@ function loop(now: number): void {
   // --- /combat ---
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  guide.draw(ctx, { w: canvas.width, h: canvas.height });
   scene.update(dt);
   scene.draw(ctx, dummy, { w: canvas.width, h: canvas.height });
   effects.update(dt);
