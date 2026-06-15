@@ -1,4 +1,5 @@
 import type { Combatant } from './combat';
+import { type Player, isShielded } from './player';
 
 interface Floater {
   value: number;
@@ -14,17 +15,23 @@ export interface Size {
 
 /**
  * Рисует сцену боя (игрок-кастер слева, манекен справа, HP-бар) и держит
- * транзитное состояние анимаций. Логическое состояние HP передаётся снаружи.
+ * транзитное состояние анимаций. Логическое состояние HP/щита — снаружи.
  */
 export class CombatScene {
   private flash = 0; // 0..1 интенсивность вспышки попадания
   private shake = 0; // амплитуда тряски манекена (px)
   private floaters: Floater[] = [];
   private dummyPos = { x: 0, y: 0 };
+  private playerPos = { x: 0, y: 0 };
 
-  /** Текущая позиция манекена — для привязки взрыва частиц. */
+  /** Текущая позиция манекена — цель снарядов. */
   get target(): { x: number; y: number } {
     return this.dummyPos;
+  }
+
+  /** Текущая позиция игрока — точка вылета снарядов. */
+  get origin(): { x: number; y: number } {
+    return this.playerPos;
   }
 
   /** Запустить анимацию попадания с числом урона. */
@@ -51,18 +58,47 @@ export class CombatScene {
     this.floaters = this.floaters.filter((f) => f.life > 0);
   }
 
-  draw(ctx: CanvasRenderingContext2D, dummy: Combatant, size: Size): void {
+  draw(ctx: CanvasRenderingContext2D, dummy: Combatant, player: Player, size: Size): void {
     const playerX = size.w * 0.2;
     const dummyX = size.w * 0.75;
     const groundY = size.h * 0.7;
     this.dummyPos = { x: dummyX, y: groundY - 80 };
+    this.playerPos = { x: playerX, y: groundY - 60 }; // уровень руки — откуда летит снаряд
 
-    this.drawCaster(ctx, playerX, groundY);
+    this.drawCaster(ctx, playerX, groundY, player);
     this.drawDummy(ctx, dummyX, groundY, dummy);
     this.drawFloaters(ctx);
   }
 
-  private drawCaster(ctx: CanvasRenderingContext2D, x: number, groundY: number): void {
+  private drawCaster(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    groundY: number,
+    player: Player,
+  ): void {
+    // аура щита позади фигуры
+    if (isShielded(player)) {
+      const sec = Math.ceil(player.shieldMs / 1000);
+      ctx.save();
+      ctx.globalAlpha = 0.2;
+      ctx.fillStyle = '#c0a7ff';
+      ctx.beginPath();
+      ctx.arc(x, groundY - 55, 48, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.globalAlpha = 0.9;
+      ctx.strokeStyle = '#c0a7ff';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(x, groundY - 55, 48, 0, 2 * Math.PI);
+      ctx.stroke();
+      ctx.fillStyle = '#c0a7ff';
+      ctx.font = 'bold 13px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(`щит ${sec}с`, x, groundY - 116);
+      ctx.restore();
+    }
+
+    // фигура-кастер
     ctx.save();
     ctx.strokeStyle = '#9fb4ff';
     ctx.lineWidth = 4;
@@ -76,7 +112,7 @@ export class CombatScene {
     ctx.moveTo(x, groundY - 24);
     ctx.lineTo(x + 16, groundY); // правая нога
     ctx.moveTo(x, groundY - 60);
-    ctx.lineTo(x + 30, groundY - 72); // рука, указывающая на манекен
+    ctx.lineTo(x + 30, groundY - 72); // рука к манекену
     ctx.stroke();
     ctx.restore();
   }
