@@ -1,42 +1,24 @@
-import { CONFIG } from '../config';
-
 export interface Combo {
   id: string;
   name: string;
-  /** Упорядоченная пара id глифов. */
+  /** Пара id глифов (порядок при поиске не важен). */
   parts: [string, string];
 }
 
 export const COMBOS: Combo[] = [
-  { id: 'fireball', name: 'Огнешар', parts: ['fire', 'arrow'] },
+  { id: 'firestorm', name: 'Огненный вихрь', parts: ['fire', 'air'] },
+  { id: 'storm', name: 'Шторм', parts: ['water', 'lightning'] },
+  { id: 'magma', name: 'Магма', parts: ['earth', 'fire'] },
   { id: 'healing-barrier', name: 'Лечащий барьер', parts: ['water', 'shield'] },
 ];
 
-export type ComboResult =
-  | { type: 'single'; elementId: string }
-  | { type: 'combo'; combo: Combo };
-
-export class ComboTracker {
-  private lastId: string | null = null;
-  private lastTime = 0;
-
-  push(elementId: string, timeMs: number): ComboResult {
-    if (this.lastId !== null && timeMs - this.lastTime <= CONFIG.comboWindowMs) {
-      const combo = COMBOS.find(
-        (c) => c.parts[0] === this.lastId && c.parts[1] === elementId,
-      );
-      if (combo) {
-        this.reset();
-        return { type: 'combo', combo };
-      }
-    }
-    this.lastId = elementId;
-    this.lastTime = timeMs;
-    return { type: 'single', elementId };
-  }
-
-  private reset(): void {
-    this.lastId = null;
-    this.lastTime = 0;
-  }
+/** Ищет комбо по двум id глифов в любом порядке. */
+export function findCombo(a: string, b: string): Combo | null {
+  return (
+    COMBOS.find(
+      (c) =>
+        (c.parts[0] === a && c.parts[1] === b) ||
+        (c.parts[0] === b && c.parts[1] === a),
+    ) ?? null
+  );
 }
