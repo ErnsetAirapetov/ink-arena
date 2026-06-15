@@ -1,9 +1,9 @@
-import { StrokeRecorder } from './drawing/stroke';
+import { StrokeRecorder, type Stroke } from './drawing/stroke';
 import { drawInk } from './drawing/canvas-renderer';
-import { recognize } from './recognition/recognizer';
+import { recognize, type MatchResult } from './recognition/recognizer';
 import { GLYPHS } from './recognition/glyphs';
-import { buildSpell } from './spells/spell-system';
-import { ComboTracker } from './spells/combo';
+import { clusterStrokes } from './recognition/clustering';
+import { resolveCast } from './spells/cast';
 import { EffectSystem, colorFor } from './effects/effects';
 import { Hud } from './ui/hud';
 import { CONFIG } from './config';
@@ -22,8 +22,8 @@ resize();
 window.addEventListener('resize', resize);
 
 const recorder = new StrokeRecorder();
-const combo = new ComboTracker();
 const effects = new EffectSystem();
+const strokes: Stroke[] = []; // буфер завершённых линий до каста
 
 // --- combat ---
 let dummy = createCombatant(CONFIG.combat.dummyHp);
@@ -37,37 +37,41 @@ canvas.addEventListener('pointerdown', (e) => {
 canvas.addEventListener('pointermove', (e) => {
   if (recorder.isDrawing) recorder.add(e.clientX, e.clientY, e.timeStamp);
 });
-canvas.addEventListener('pointerup', (e) => {
-  if (!recorder.isDrawing) return;
-  const stroke = recorder.finish();
-  const match = recognize(stroke.points, GLYPHS);
-  if (!match) return;
+canvas.addEventListener('pointerup', () => {
+  if (recorder.isDrawing) strokes.push(recorder.finish());
+});
 
-  const spell = buildSpell(match, stroke.duration);
+window.addEventListener('keydown', (e) => {
+  if (e.code === 'Space') {
+    e.preventDefault();
+    cast();
+  }
+});
 
-  if (!spell.success) {
-    hud.showSpell(spell);
-    return;
+function cast(): void {
+  const groups = clusterStrokes(strokes, CONFIG.clusterGapPx);
+  const results: MatchResult[] = [];
+  for (const group of groups) {
+    const points = group.flatMap((s) => s.points);
+    const match = recognize(points, GLYPHS);
+    if (match) results.push(match);
   }
 
-  const result = combo.push(spell.elementId, e.timeStamp);
-  const colorId = result.type === 'combo' ? result.combo.id : spell.elementId;
-  if (result.type === 'combo') {
-    hud.showCombo(result.combo.name, spell.power);
-  } else {
-    hud.showSpell(spell);
-  }
+  const outcome = resolveCast(results);
+  hud.showCast(outcome);
 
   // --- combat: нанести урон манекену ---
-  if (dummy.alive) {
-    const dmg = damageFor(spell);
+  if (outcome.kind !== 'fizzle' && dummy.alive) {
+    const dmg = damageFor(outcome.power);
     dummy = applyDamage(dummy, dmg);
     scene.hit(dmg);
-    effects.burst(scene.target.x, scene.target.y, colorFor(colorId), spell.power);
-    if (!dummy.alive) respawnAt = e.timeStamp + CONFIG.combat.respawnMs;
+    effects.burst(scene.target.x, scene.target.y, colorFor(outcome.id), outcome.power);
+    if (!dummy.alive) respawnAt = performance.now() + CONFIG.combat.respawnMs;
   }
   // --- /combat ---
-});
+
+  strokes.length = 0; // очистить буфер и холст
+}
 
 let last = performance.now();
 function loop(now: number): void {
@@ -86,6 +90,7 @@ function loop(now: number): void {
   scene.draw(ctx, dummy, { w: canvas.width, h: canvas.height });
   effects.update(dt);
   effects.draw(ctx);
+  for (const s of strokes) drawInk(ctx, s.points);
   if (recorder.isDrawing) drawInk(ctx, recorder.current);
   requestAnimationFrame(loop);
 }

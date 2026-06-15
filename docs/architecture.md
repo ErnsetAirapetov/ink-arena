@@ -4,25 +4,26 @@
 простые интерфейсы.
 
 ## Модули
-- `geometry.ts` — тип `Point`, расстояние, длина пути. Чистые функции.
+- `geometry.ts` — `Point`, расстояние, длина пути, `boundingBox`, `boxGap`.
 - `drawing/stroke.ts` — `StrokeRecorder`: накопление точек в `Stroke`. Без DOM.
-- `drawing/canvas-renderer.ts` — отрисовка живого следа чернил.
-- `recognition/glyphs.ts` — эталоны глифов.
+- `drawing/canvas-renderer.ts` — отрисовка следа чернил.
+- `recognition/glyphs.ts` — эталоны 6 стихий.
 - `recognition/recognizer.ts` — алгоритм $P: `recognize(points, templates)`.
-- `spells/spell-system.ts` — сборка `Spell` (power, скорость, успех).
-- `spells/combo.ts` — `ComboTracker`: последовательность глифов в окне времени.
-- `effects/effects.ts` — система частиц.
+- `recognition/clustering.ts` — `clusterStrokes`: группировка линий по близости.
+- `spells/combo.ts` — `findCombo(a, b)`: поиск комбо в любом порядке.
+- `spells/cast.ts` — `resolveCast(results)`: одиночное/комбо/осечка + сила.
+- `effects/effects.ts` — система частиц, цвета по id.
 - `combat/combat.ts` — чистая логика боя: `Combatant` (HP), `damageFor`, `applyDamage`, `respawn`.
 - `combat/scene.ts` — `CombatScene`: отрисовка игрока, манекена, HP-бара и анимаций попадания.
-- `ui/hud.ts` — текстовая обратная связь.
-- `config.ts` — числовые крутилки баланса.
-- `main.ts` — связывает ввод → распознавание → заклинание → эффект + HUD.
+- `ui/hud.ts` — текстовая обратная связь (`showCast`).
+- `config.ts` — крутилки баланса (`minScore`, `clusterGapPx`, `combat`).
+- `main.ts` — буфер линий, каст по пробелу, бой, отрисовка.
 
 ## Поток данных
-ввод указателя → `StrokeRecorder` → `recognize()` → `buildSpell()` →
-`ComboTracker.push()` → `damageFor()` → `applyDamage()` → `CombatScene` +
-`EffectSystem` + `Hud`.
+ввод указателя → `StrokeRecorder` → буфер линий → (пробел) →
+`clusterStrokes` → `recognize` по группам → `resolveCast` →
+`damageFor` → `applyDamage` → `CombatScene` + `EffectSystem` + `Hud`.
 
 ## Что тестируется
-Чистые модули (geometry, stroke, recognizer, spell-system, combo, combat) —
+Чистые модули (geometry, stroke, clustering, recognizer, combo, cast, combat) —
 юнит-тестами Vitest. Визуальные модули — вручную в браузере.

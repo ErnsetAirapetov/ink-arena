@@ -1,14 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import { createCombatant, damageFor, applyDamage, respawn } from '../src/combat/combat';
-import type { Spell } from '../src/spells/spell-system';
-
-const spell = (power: number): Spell => ({
-  elementId: 'fire',
-  element: 'Огонь',
-  power,
-  speed: 'normal',
-  success: true,
-});
 
 describe('combat', () => {
   it('createCombatant — полный HP и жив', () => {
@@ -16,8 +7,8 @@ describe('combat', () => {
   });
 
   it('damageFor — урон зависит от точности (power × 0.6)', () => {
-    expect(damageFor(spell(100))).toBe(60);
-    expect(damageFor(spell(50))).toBe(30);
+    expect(damageFor(100)).toBe(60);
+    expect(damageFor(50)).toBe(30);
   });
 
   it('applyDamage — снимает HP, остаётся жив', () => {

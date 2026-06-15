@@ -51,11 +51,15 @@ export class EffectSystem {
 /** Цвет эффекта по id элемента/комбо. */
 export function colorFor(id: string): string {
   const map: Record<string, string> = {
-    fire: '#ff6a3d',
+    fire: '#ff5a36',
     water: '#3da5ff',
-    shield: '#ffd23d',
-    arrow: '#c9d1d9',
-    fireball: '#ff3d3d',
+    air: '#d8f5e3',
+    earth: '#a9743b',
+    lightning: '#ffd23d',
+    shield: '#c0a7ff',
+    firestorm: '#ff8c1a',
+    storm: '#6ad1ff',
+    magma: '#ff3d12',
     'healing-barrier': '#3dffa5',
   };
   return map[id] ?? '#ffffff';

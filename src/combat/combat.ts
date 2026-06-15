@@ -1,5 +1,4 @@
 import { CONFIG } from '../config';
-import type { Spell } from '../spells/spell-system';
 
 export interface Combatant {
   hp: number;
@@ -12,9 +11,9 @@ export function createCombatant(maxHp: number): Combatant {
   return { hp: maxHp, maxHp, alive: true };
 }
 
-/** Урон заклинания: зависит только от точности (power). */
-export function damageFor(spell: Spell): number {
-  return Math.round(spell.power * CONFIG.combat.damagePerPower);
+/** Урон каста: зависит только от точности (power 0..100). */
+export function damageFor(power: number): number {
+  return Math.round(power * CONFIG.combat.damagePerPower);
 }
 
 /** Применить урон. Возвращает нового бойца, вход не мутирует. */
