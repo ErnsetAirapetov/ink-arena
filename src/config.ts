@@ -9,6 +9,15 @@ export const CONFIG = {
     fastBelowMs: 500,
     slowAboveMs: 1500,
   },
+  /** Параметры боя. */
+  combat: {
+    /** HP тренировочного манекена. */
+    dummyHp: 100,
+    /** Множитель урона от точности заклинания (power 100 → 60 урона). */
+    damagePerPower: 0.6,
+    /** Задержка авто-респавна манекена после смерти, мс. */
+    respawnMs: 1500,
+  },
 } as const;
 
 export type SpeedTier = 'fast' | 'normal' | 'slow';
