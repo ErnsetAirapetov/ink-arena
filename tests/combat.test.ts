@@ -62,3 +62,26 @@ describe('combat — размер/урон/скорость', () => {
     expect(flightTimeMs(1.5)).toBe(2000);
   });
 });
+
+import { blockedDamage } from '../src/combat/combat';
+
+describe('blockedDamage — поглощение щитом', () => {
+  it('базовый щит (без стихии) — блок shieldBlock', () => {
+    // 0.6 блок → 100 × 0.4 = 40
+    expect(blockedDamage(null, 100, 'fire')).toBe(40);
+  });
+
+  it('стихийный щит силён против атаки → больше блок', () => {
+    // щит fire против air (fire бьёт air, ×1.5): блок 0.6×1.5=0.9 → 100×0.1=10
+    expect(blockedDamage('fire', 100, 'air')).toBe(10);
+  });
+
+  it('стихийный щит слаб против атаки → меньше блок', () => {
+    // щит air против fire (air слаб, ×0.66): блок 0.6×0.66=0.396 → 100×0.604≈60
+    expect(blockedDamage('air', 100, 'fire')).toBe(60);
+  });
+
+  it('совпадение стихий щита и атаки → базовый блок', () => {
+    expect(blockedDamage('fire', 100, 'fire')).toBe(40);
+  });
+});
