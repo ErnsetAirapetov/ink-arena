@@ -47,9 +47,5 @@ export const CONFIG = {
     telegraphMs: 1500,
     /** Пауза между атаками манекена, мс. */
     dummyAttackIntervalMs: 3000,
-    /** Базовая доля поглощения урона щитом (0..1). */
-    shieldBlock: 0.6,
-    /** Верхняя граница доли поглощения. */
-    maxBlockFraction: 0.95,
   },
 } as const;

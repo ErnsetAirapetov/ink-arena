@@ -1,5 +1,4 @@
 import { CONFIG } from '../config';
-import { affinity } from './elements';
 import { absorbIncoming, type Status } from './status';
 
 export interface Combatant {
@@ -44,23 +43,6 @@ export function speedFactor(sizeFactor: number): number {
 /** Время полёта снаряда: эталонное время / множитель скорости. */
 export function flightTimeMs(sizeFactor: number): number {
   return CONFIG.combat.referenceFlightMs / speedFactor(sizeFactor);
-}
-
-/**
- * Финальный урон по цели с активным щитом стихии shieldElement (null — базовый).
- * Стихийный щит учитывает сродство против стихии атаки.
- */
-export function blockedDamage(
-  shieldElement: string | null,
-  rawDamage: number,
-  attackElement: string,
-): number {
-  const mult = shieldElement ? affinity(shieldElement, attackElement) : 1;
-  const blockFraction = Math.max(
-    0,
-    Math.min(CONFIG.combat.maxBlockFraction, CONFIG.combat.shieldBlock * mult),
-  );
-  return Math.round(rawDamage * (1 - blockFraction));
 }
 
 /** Применить входящую атаку через статусы (щит со сродством). */
