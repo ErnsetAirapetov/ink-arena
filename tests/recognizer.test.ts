@@ -14,11 +14,13 @@ function jitter(points: Point[], amount: number): Point[] {
   }));
 }
 
-describe('recognize ($P)', () => {
-  it('узнаёт глиф, повторяющий эталон', () => {
-    const res = recognize(fire.points, GLYPHS)!;
-    expect(res.glyph.id).toBe('fire');
-    expect(res.score).toBeGreaterThan(0.85);
+describe('recognize ($P) — 6 стихий', () => {
+  it('каждый эталон узнаётся как сам себя с высокой точностью', () => {
+    for (const g of GLYPHS) {
+      const res = recognize(g.points, GLYPHS)!;
+      expect(res.glyph.id, `глиф ${g.id}`).toBe(g.id);
+      expect(res.score, `score ${g.id}`).toBeGreaterThan(0.9);
+    }
   });
 
   it('score всегда в диапазоне [0, 1]', () => {

@@ -20,29 +20,53 @@ function circle(cx: number, cy: number, r: number, n: number): Point[] {
   return pts;
 }
 
+/** Архимедова спираль из центра наружу. */
+function spiral(cx: number, cy: number, turns: number, n: number): Point[] {
+  const pts: Point[] = [];
+  const maxT = turns * 2 * Math.PI;
+  for (let i = 0; i < n; i++) {
+    const th = (maxT * i) / (n - 1);
+    const r = (50 * th) / maxT;
+    pts.push(p(cx + r * Math.cos(th), cy + r * Math.sin(th)));
+  }
+  return pts;
+}
+
 export const GLYPHS: Glyph[] = [
   {
     id: 'fire',
     name: 'Огонь',
-    // Треугольник △
+    // Треугольник △ вершиной вверх
     points: [p(50, 0), p(0, 100), p(100, 100), p(50, 0)],
   },
   {
     id: 'water',
     name: 'Вода',
-    // Волна ~
-    points: [p(0, 50), p(25, 0), p(50, 50), p(75, 100), p(100, 50)],
+    // Волна ~ (две дуги)
+    points: [p(0, 50), p(20, 10), p(40, 50), p(60, 90), p(80, 50), p(100, 10)],
+  },
+  {
+    id: 'air',
+    name: 'Воздух',
+    // Спираль ◠
+    points: spiral(50, 50, 2.5, 24),
+  },
+  {
+    id: 'earth',
+    name: 'Земля',
+    // Квадрат □
+    points: [p(0, 0), p(100, 0), p(100, 100), p(0, 100), p(0, 0)],
+  },
+  {
+    id: 'lightning',
+    name: 'Молния',
+    // Зигзаг ⚡
+    points: [p(55, 0), p(20, 40), p(45, 40), p(15, 100)],
   },
   {
     id: 'shield',
     name: 'Щит',
-    // Окружность ○
+    // Круг ○
     points: circle(50, 50, 50, 16),
-  },
-  {
-    id: 'arrow',
-    name: 'Стрела',
-    // Диагональ /
-    points: [p(0, 100), p(50, 50), p(100, 0)],
   },
 ];
