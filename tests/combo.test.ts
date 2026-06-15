@@ -14,9 +14,8 @@ describe('findCombo', () => {
     expect(findCombo('fire', 'water')).toBeNull();
   });
 
-  it('таблица содержит лечащий барьер (вода+щит)', () => {
-    const found = COMBOS.find((c) => c.id === 'healing-barrier');
-    expect(found).toBeDefined();
-    expect(found!.parts).toEqual(['water', 'shield']);
+  it('лечащего барьера больше нет (вода+щит теперь стихийный щит)', () => {
+    expect(COMBOS.find((c) => c.id === 'healing-barrier')).toBeUndefined();
+    expect(findCombo('water', 'shield')).toBeNull();
   });
 });

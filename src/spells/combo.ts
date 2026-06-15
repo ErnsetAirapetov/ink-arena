@@ -9,7 +9,6 @@ export const COMBOS: Combo[] = [
   { id: 'firestorm', name: 'Огненный вихрь', parts: ['fire', 'air'] },
   { id: 'storm', name: 'Шторм', parts: ['water', 'lightning'] },
   { id: 'magma', name: 'Магма', parts: ['earth', 'fire'] },
-  { id: 'healing-barrier', name: 'Лечащий барьер', parts: ['water', 'shield'] },
 ];
 
 /** Ищет комбо по двум id глифов в любом порядке. */
