@@ -1,11 +1,13 @@
-import { StrokeRecorder } from './drawing/stroke';
+import { StrokeRecorder, type Stroke } from './drawing/stroke';
 import { drawInk } from './drawing/canvas-renderer';
-import { recognize } from './recognition/recognizer';
+import { recognize, type MatchResult } from './recognition/recognizer';
 import { GLYPHS } from './recognition/glyphs';
-import { buildSpell } from './spells/spell-system';
-import { ComboTracker } from './spells/combo';
+import { clusterStrokes } from './recognition/clustering';
+import { resolveCast } from './spells/cast';
 import { EffectSystem, colorFor } from './effects/effects';
 import { Hud } from './ui/hud';
+import { CONFIG } from './config';
+import { boundingBox } from './geometry';
 
 const canvas = document.getElementById('game') as HTMLCanvasElement;
 const ctx = canvas.getContext('2d')!;
@@ -19,14 +21,8 @@ resize();
 window.addEventListener('resize', resize);
 
 const recorder = new StrokeRecorder();
-const combo = new ComboTracker();
 const effects = new EffectSystem();
-
-function center(points: readonly { x: number; y: number }[]): { x: number; y: number } {
-  let x = 0, y = 0;
-  for (const p of points) { x += p.x; y += p.y; }
-  return { x: x / points.length, y: y / points.length };
-}
+const strokes: Stroke[] = []; // буфер завершённых линий до каста
 
 canvas.addEventListener('pointerdown', (e) => {
   recorder.start(e.clientX, e.clientY, e.timeStamp);
@@ -34,30 +30,39 @@ canvas.addEventListener('pointerdown', (e) => {
 canvas.addEventListener('pointermove', (e) => {
   if (recorder.isDrawing) recorder.add(e.clientX, e.clientY, e.timeStamp);
 });
-canvas.addEventListener('pointerup', (e) => {
-  if (!recorder.isDrawing) return;
-  const pts = [...recorder.current];
-  const stroke = recorder.finish();
-  const match = recognize(stroke.points, GLYPHS);
-  if (!match) return;
+canvas.addEventListener('pointerup', () => {
+  if (recorder.isDrawing) strokes.push(recorder.finish());
+});
 
-  const spell = buildSpell(match, stroke.duration);
-  const at = center(pts);
-
-  if (!spell.success) {
-    hud.showSpell(spell);
-    return;
-  }
-
-  const result = combo.push(spell.elementId, e.timeStamp);
-  if (result.type === 'combo') {
-    hud.showCombo(result.combo.name, spell.power);
-    effects.burst(at.x, at.y, colorFor(result.combo.id), Math.min(100, spell.power + 20));
-  } else {
-    hud.showSpell(spell);
-    effects.burst(at.x, at.y, colorFor(spell.elementId), spell.power);
+window.addEventListener('keydown', (e) => {
+  if (e.code === 'Space') {
+    e.preventDefault();
+    cast();
   }
 });
+
+function cast(): void {
+  const groups = clusterStrokes(strokes, CONFIG.clusterGapPx);
+  const results: MatchResult[] = [];
+  for (const group of groups) {
+    const points = group.flatMap((s) => s.points);
+    const match = recognize(points, GLYPHS);
+    if (match) results.push(match);
+  }
+
+  const outcome = resolveCast(results);
+  hud.showCast(outcome);
+
+  if (outcome.kind !== 'fizzle') {
+    const all = strokes.flatMap((s) => s.points);
+    const box = boundingBox(all);
+    const cx = (box.minX + box.maxX) / 2;
+    const cy = (box.minY + box.maxY) / 2;
+    effects.burst(cx, cy, colorFor(outcome.id), outcome.power);
+  }
+
+  strokes.length = 0; // очистить буфер и холст
+}
 
 let last = performance.now();
 function loop(now: number): void {
@@ -66,6 +71,7 @@ function loop(now: number): void {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   effects.update(dt);
   effects.draw(ctx);
+  for (const s of strokes) drawInk(ctx, s.points);
   if (recorder.isDrawing) drawInk(ctx, recorder.current);
   requestAnimationFrame(loop);
 }
