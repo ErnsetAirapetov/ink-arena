@@ -14,6 +14,7 @@
 - `spells/cast.ts` — `resolveCast(results)`: одиночное/комбо/осечка + сила.
 - `effects/effects.ts` — система частиц, цвета по id.
 - `combat/combat.ts` — чистая логика боя: `Combatant` (HP), `sizeFactor`, `damageFor`, `speedFactor`, `flightTimeMs`, `applyDamage`, `respawn`.
+- `combat/elements.ts` — сродство стихий (пентаграмма), `affinity(att, def)`.
 - `combat/projectile.ts` — `ProjectileSystem`: снаряды по Безье-траектории, прилёты, отрисовка.
 - `combat/player.ts` — статус щита игрока (`castShield`, `tickPlayer`, `isShielded`).
 - `combat/scene.ts` — `CombatScene`: игрок (с аурой щита), манекен, HP-бар, анимации.
