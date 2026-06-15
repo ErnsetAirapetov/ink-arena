@@ -1,5 +1,6 @@
 import type { Combatant } from './combat';
 import { type Player, isShielded } from './player';
+import { colorFor } from '../effects/effects';
 
 interface Floater {
   value: number;
@@ -23,6 +24,7 @@ export class CombatScene {
   private floaters: Floater[] = [];
   private dummyPos = { x: 0, y: 0 };
   private playerPos = { x: 0, y: 0 };
+  private telegraph: string | null = null;
 
   /** Текущая позиция манекена — цель снарядов. */
   get target(): { x: number; y: number } {
@@ -42,6 +44,21 @@ export class CombatScene {
       value: amount,
       x: this.dummyPos.x,
       y: this.dummyPos.y - 60,
+      life: 1,
+    });
+  }
+
+  /** Установить стихию-телеграф над манекеном (null — нет). */
+  setTelegraph(element: string | null): void {
+    this.telegraph = element;
+  }
+
+  /** Анимация попадания по игроку (всплывающее число урона). */
+  hitPlayer(amount: number): void {
+    this.floaters.push({
+      value: amount,
+      x: this.playerPos.x,
+      y: this.playerPos.y - 40,
       life: 1,
     });
   }
@@ -67,7 +84,25 @@ export class CombatScene {
 
     this.drawCaster(ctx, playerX, groundY, player);
     this.drawDummy(ctx, dummyX, groundY, dummy);
+    this.drawHpBar(ctx, playerX, groundY - 120, player);
+    if (this.telegraph) this.drawTelegraph(ctx, dummyX, groundY - 150);
     this.drawFloaters(ctx);
+  }
+
+  private drawTelegraph(ctx: CanvasRenderingContext2D, cx: number, y: number): void {
+    if (!this.telegraph) return;
+    ctx.save();
+    ctx.globalAlpha = 0.9;
+    ctx.fillStyle = colorFor(this.telegraph);
+    ctx.beginPath();
+    ctx.arc(cx, y, 14, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = '#11131a';
+    ctx.font = 'bold 12px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('!', cx, y + 4);
+    ctx.restore();
   }
 
   private drawCaster(
