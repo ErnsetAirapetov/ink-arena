@@ -20,18 +20,6 @@ function circle(cx: number, cy: number, r: number, n: number): Point[] {
   return pts;
 }
 
-/** Архимедова спираль из центра наружу. */
-function spiral(cx: number, cy: number, turns: number, n: number): Point[] {
-  const pts: Point[] = [];
-  const maxT = turns * 2 * Math.PI;
-  for (let i = 0; i < n; i++) {
-    const th = (maxT * i) / (n - 1);
-    const r = (50 * th) / maxT;
-    pts.push(p(cx + r * Math.cos(th), cy + r * Math.sin(th)));
-  }
-  return pts;
-}
-
 export const GLYPHS: Glyph[] = [
   {
     id: 'fire',
@@ -48,8 +36,8 @@ export const GLYPHS: Glyph[] = [
   {
     id: 'air',
     name: 'Воздух',
-    // Спираль ◠
-    points: spiral(50, 50, 2.5, 24),
+    // Вертикальная волна ⌇ (горизонтальная волна, повёрнутая на 90°)
+    points: [p(50, 0), p(90, 20), p(50, 40), p(10, 60), p(50, 80), p(90, 100)],
   },
   {
     id: 'earth',
