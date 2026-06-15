@@ -56,3 +56,30 @@ describe('projectile — система', () => {
     expect(second[0].damage).toBe(2);
   });
 });
+
+describe('ProjectileSystem — цель и стихия снаряда', () => {
+  it('прилёт несёт target и element', () => {
+    const ps = new ProjectileSystem();
+    ps.spawn({
+      from: { x: 0, y: 0 },
+      to: { x: 10, y: 0 },
+      flightMs: 100,
+      damage: 15,
+      colorId: 'fire',
+      target: 'player',
+      element: 'fire',
+    });
+    const arrivals = ps.update(200);
+    expect(arrivals).toHaveLength(1);
+    expect(arrivals[0].target).toBe('player');
+    expect(arrivals[0].element).toBe('fire');
+  });
+
+  it('по умолчанию target = dummy, element = пусто', () => {
+    const ps = new ProjectileSystem();
+    ps.spawn({ from: { x: 0, y: 0 }, to: { x: 10, y: 0 }, flightMs: 100, damage: 5, colorId: 'water' });
+    const arrivals = ps.update(200);
+    expect(arrivals[0].target).toBe('dummy');
+    expect(arrivals[0].element).toBe('');
+  });
+});

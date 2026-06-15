@@ -26,6 +26,8 @@ export function arcControl(from: Pt, to: Pt, offset: number): Pt {
   return { x: mx + px * offset, y: my + py * offset };
 }
 
+export type ProjectileTarget = 'dummy' | 'player';
+
 interface Projectile {
   from: Pt;
   to: Pt;
@@ -34,6 +36,8 @@ interface Projectile {
   elapsed: number;
   damage: number;
   colorId: string;
+  target: ProjectileTarget;
+  element: string;
 }
 
 export interface Arrival {
@@ -41,6 +45,8 @@ export interface Arrival {
   y: number;
   damage: number;
   colorId: string;
+  target: ProjectileTarget;
+  element: string;
 }
 
 export interface SpawnOpts {
@@ -49,6 +55,8 @@ export interface SpawnOpts {
   flightMs: number;
   damage: number;
   colorId: string;
+  target?: ProjectileTarget;
+  element?: string;
 }
 
 /** Доля случайной «выгнутости» дуги от длины пути (только визуал, на тайминг не влияет). */
@@ -71,6 +79,8 @@ export class ProjectileSystem {
       elapsed: 0,
       damage: opts.damage,
       colorId: opts.colorId,
+      target: opts.target ?? 'dummy',
+      element: opts.element ?? '',
     });
   }
 
@@ -80,7 +90,14 @@ export class ProjectileSystem {
     for (const p of this.projectiles) {
       p.elapsed += dtMs;
       if (p.elapsed >= p.flightMs) {
-        arrived.push({ x: p.to.x, y: p.to.y, damage: p.damage, colorId: p.colorId });
+        arrived.push({
+          x: p.to.x,
+          y: p.to.y,
+          damage: p.damage,
+          colorId: p.colorId,
+          target: p.target,
+          element: p.element,
+        });
       }
     }
     this.projectiles = this.projectiles.filter((p) => p.elapsed < p.flightMs);
