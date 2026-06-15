@@ -1,24 +1,17 @@
-import type { Spell } from '../spells/spell-system';
+import type { CastOutcome } from '../spells/cast';
 
 export class Hud {
   constructor(private el: HTMLElement) {
-    this.el.innerHTML = 'Нарисуй глиф: △ огонь · ~ вода · ○ щит · / стрела';
+    this.el.innerHTML =
+      'Рисуй глифы, затем ПРОБЕЛ — каст. △ огонь · ~ вода · ◠ воздух · □ земля · ⚡ молния · ○ щит';
   }
 
-  showSpell(spell: Spell): void {
-    if (!spell.success) {
-      this.el.innerHTML = `Заклинание рассеялось (точность ${spell.power}%) — рисуй точнее`;
+  showCast(outcome: CastOutcome): void {
+    if (outcome.kind === 'fizzle') {
+      this.el.innerHTML = `Осечка: ${outcome.reason}`;
       return;
     }
-    this.el.innerHTML =
-      `<b>${spell.element}</b> · точность ${spell.power}% · скорость ${this.ru(spell.speed)}`;
-  }
-
-  showCombo(name: string, power: number): void {
-    this.el.innerHTML = `КОМБО: <b>${name}</b> · сила ${power}%`;
-  }
-
-  private ru(speed: string): string {
-    return { fast: 'быстро', normal: 'обычно', slow: 'медленно' }[speed] ?? speed;
+    const label = outcome.kind === 'combo' ? 'КОМБО' : 'Заклинание';
+    this.el.innerHTML = `${label}: <b>${outcome.name}</b> · сила ${outcome.power}%`;
   }
 }
