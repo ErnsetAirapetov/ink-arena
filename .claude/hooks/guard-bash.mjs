@@ -89,13 +89,20 @@ if (
 
 // 3. Чужое авторство в коммитах
 if (/\bgit\s+commit\b/.test(cmd)) {
-  if (/Co-Authored-By/i.test(cmd)) {
+  // Сканируем текст сообщения (-m), а не всю команду: путь .claude/... в той
+  // же строке — не «упоминание ассистента». Без -m (редактор недоступен,
+  // -F и т.п.) — консервативно сканируем всю команду.
+  const msgs = [...cmd.matchAll(/-m\s+(?:"([^"]*)"|'([^']*)'|(\S+))/g)]
+    .map((m) => m[1] ?? m[2] ?? m[3])
+    .join('\n')
+  const scan = msgs || cmd
+  if (/Co-Authored-By/i.test(scan)) {
     deny(
       `Trailer Co-Authored-By запрещён. Автор коммитов только владелец (${OWNER_EMAIL}), ` +
         'упоминание ассистентов в авторстве недопустимо. См. CLAUDE.md.'
     )
   }
-  if (/(claude|anthropic|assistant|noreply@anthropic)/i.test(cmd)) {
+  if (/(claude|anthropic|assistant|noreply@anthropic)/i.test(scan)) {
     deny(
       'В сообщении коммита есть упоминание ассистента. Это запрещено разделом ' +
         '«Соглашения» в CLAUDE.md — перепиши сообщение по существу изменений.'
