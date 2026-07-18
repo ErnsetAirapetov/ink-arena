@@ -38,7 +38,7 @@ function totalTurning(stroke: Stroke): number {
 // Является ли штрих замыкающим кругом.
 export function isClosingCircle(stroke: Stroke): boolean {
   const cfg = config.recognition.circle;
-  if (stroke.length < 8) return false;
+  if (stroke.length < cfg.minPoints) return false;
 
   const bb = boundingBox(stroke);
   if (bb.diagonal === 0) return false;
