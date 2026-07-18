@@ -3,6 +3,7 @@
 // Блокировка = exit 2 + текст причины в stderr (он уходит модели как фидбек).
 
 import { execSync } from 'node:child_process'
+import path from 'node:path'
 
 const OWNER_EMAIL = 'eriktarakan@gmail.com'
 
@@ -11,8 +12,11 @@ process.stdin.setEncoding('utf8')
 for await (const chunk of process.stdin) raw += chunk
 
 let cmd = ''
+let cwd = ''
 try {
-  cmd = JSON.parse(raw)?.tool_input?.command ?? ''
+  const data = JSON.parse(raw)
+  cmd = data?.tool_input?.command ?? ''
+  cwd = data?.cwd ?? ''
 } catch {
   process.exit(0) // не смогли разобрать — не мешаем
 }
@@ -23,9 +27,22 @@ const deny = (why) => {
   process.exit(2)
 }
 
+// Каталог, в котором git РЕАЛЬНО выполнится: приоритет `git -C <путь>`,
+// затем ведущий `cd <путь> && ...`, затем cwd сессии из входа хука.
+// Без этого проверка ветки смотрела бы на основной чекаут, а не на
+// worktree агента, и блокировала бы легитимные коммиты в ветках задач.
+const effectiveDir = () => {
+  const base = cwd || process.cwd()
+  const mC = cmd.match(/\bgit\s+-C\s+["']?([^\s"']+)/)
+  if (mC) return path.resolve(base, mC[1])
+  const mCd = cmd.match(/^\s*cd\s+["']?([^\s"';&|]+)/)
+  if (mCd) return path.resolve(base, mCd[1])
+  return base
+}
+
 const currentBranch = () => {
   try {
-    return execSync('git rev-parse --abbrev-ref HEAD', {
+    return execSync(`git -C "${effectiveDir()}" rev-parse --abbrev-ref HEAD`, {
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'ignore'],
     }).trim()
@@ -44,6 +61,10 @@ if (/\bgit\s+commit\b/.test(cmd) && currentBranch() === 'main') {
 }
 if (/\bgit\s+push\b.*\b(origin\s+)?main\b/.test(cmd) || /\bgit\s+push\b.*\bHEAD:main\b/.test(cmd)) {
   deny('Запрещено пушить напрямую в main. Создай PR: gh pr create --base main.')
+}
+// «Голый» git push без refspec пушит текущую ветку — с main это тоже пуш в main.
+if (/\bgit\s+push\b/.test(cmd) && !/\bgit\s+push\b\s+\S+\s+\S/.test(cmd) && currentBranch() === 'main') {
+  deny('Ты на main: git push без refspec запушил бы в main. Работай в ветке задачи.')
 }
 
 // 2. Обход проверок
