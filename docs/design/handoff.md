@@ -17,19 +17,17 @@
 2. Корень `docs/` реорганизован (issue #3, Р39): README, goals,
    architecture, decisions, risks, roadmap. Журнал решений переехал из
    `design/` в корень — единый на весь проект.
-3. `../game/spellcraft.md` — В РАБОТЕ: issue #2, агент в ветке
-   `docs/spellcraft` (worktree `.claude/worktrees/spellcraft`), PR будет
-   с базой `docs/game-design`. Оркестратор ревьюит, мержит, удаляет worktree.
+3. `../game/spellcraft.md` — ГОТОВ: issue #2 закрыт, PR #4 смержен в
+   `docs/game-design`, worktree и ветка удалены. Полный цикл
+   issue → worktree → PR → merge пройден впервые.
 
 ## Следующие шаги
 
-1. Принять PR по spellcraft.md (issue #2): ревью → merge в
-   `docs/game-design` → удалить worktree и ветку.
-2. `../game/combat.md` — следующий файл GDD (Р16, Р22, Р28, Р31).
-3. Эксперименты Р36: спайк давления (кодовая задача — через issue) и
+1. `../game/combat.md` — следующий файл GDD (Р16, Р22, Р28, Р31).
+2. Эксперименты Р36: спайк давления (кодовая задача — через issue) и
    бумажная проверка грамматики на корпусе Р32.
-4. Остальные `game/`: modes, progression, ux, world — по мере готовности.
-5. После ядра `game/` — детальные спеки `tech/`.
+3. Остальные `game/`: modes, progression, ux, world — по мере готовности.
+4. После ядра `game/` — детальные спеки `tech/`.
 
 ## Договорённости с владельцем (важно для ассистента)
 
