@@ -1,19 +1,12 @@
-// Заглушка клиента вехи 1: поднимает пустой канвас на всю страницу.
-// Ввод, рендер, блокнот мага и экраны появятся в следующих задачах
-// (tech/architecture.md, «client: тонкий слой»). Игровые правила — только
-// в @inkarena/core.
+// Точка входа клиента: находит канвас и запускает петлю игры. Вся логика —
+// в game.ts и модулях render/input; игровые правила — только в @inkarena/core.
 import { coreVersion } from '@inkarena/core';
+import { startGame } from './game';
 
 const canvas = document.getElementById('game');
-if (canvas instanceof HTMLCanvasElement) {
-  const resize = (): void => {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-  };
-  resize();
-  window.addEventListener('resize', resize);
+if (!(canvas instanceof HTMLCanvasElement)) {
+  throw new Error('Не найден canvas#game');
 }
+startGame(canvas);
 
-// Пробная связь с ядром через workspace-зависимость — подтверждает, что
-// клиент видит @inkarena/core. Позже сюда придёт настоящая петля игры.
 console.info(`InkArena client, core ${coreVersion()}`);
