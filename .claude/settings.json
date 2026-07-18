@@ -35,52 +35,10 @@
       "Read(./**/*.pem)"
     ]
   },
-  "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard-bash.mjs\"",
-            "timeout": 15
-          }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": "Write|Edit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/check-ts.mjs\"",
-            "timeout": 90
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/report-tests.mjs\"",
-            "timeout": 300
-          }
-        ]
-      }
-    ],
-    "SubagentStop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/report-tests.mjs\"",
-            "timeout": 300
-          }
-        ]
-      }
-    ]
-  }
+  "extraKnownMarketplaces": {
+    "air-harness": {
+      "source": { "source": "github", "repo": "ErnsetAirapetov/air-harness" }
+    }
+  },
+  "enabledPlugins": { "harness-core@air-harness": true }
 }
