@@ -33,10 +33,10 @@ const deny = (why) => {
 // worktree агента, и блокировала бы легитимные коммиты в ветках задач.
 const effectiveDir = () => {
   const base = cwd || process.cwd()
-  const mC = cmd.match(/\bgit\s+-C\s+["']?([^\s"']+)/)
-  if (mC) return path.resolve(base, mC[1])
-  const mCd = cmd.match(/^\s*cd\s+["']?([^\s"';&|]+)/)
-  if (mCd) return path.resolve(base, mCd[1])
+  const mC = cmd.match(/\bgit\s+(?:-\S+\s+)*-C\s+(?:"([^"]+)"|'([^']+)'|(\S+))/)
+  if (mC) return path.resolve(base, mC[1] ?? mC[2] ?? mC[3])
+  const mCd = cmd.match(/^\s*cd\s+(?:"([^"]+)"|'([^']+)'|([^\s"';&|]+))/)
+  if (mCd) return path.resolve(base, mCd[1] ?? mCd[2] ?? mCd[3])
   return base
 }
 
@@ -59,17 +59,32 @@ if (/\bgit\s+commit\b/.test(cmd) && currentBranch() === 'main') {
       'изменения попадают в main только через PR. См. CLAUDE.md.'
   )
 }
-if (/\bgit\s+push\b.*\b(origin\s+)?main\b/.test(cmd) || /\bgit\s+push\b.*\bHEAD:main\b/.test(cmd)) {
-  deny('Запрещено пушить напрямую в main. Создай PR: gh pr create --base main.')
-}
-// «Голый» git push без refspec пушит текущую ветку — с main это тоже пуш в main.
-if (/\bgit\s+push\b/.test(cmd) && !/\bgit\s+push\b\s+\S+\s+\S/.test(cmd) && currentBranch() === 'main') {
-  deny('Ты на main: git push без refspec запушил бы в main. Работай в ветке задачи.')
+const pushMatch = cmd.match(/\bgit\s+push\b([^|&;]*)/)
+if (pushMatch) {
+  // Токены после push минус флаги: [remote, refspec...]. Сверяем целевой ref,
+  // а не подстроку, — иначе ложно ловились бы ветки вида feature-main.
+  const args = pushMatch[1].trim().split(/\s+/).filter((t) => t && !t.startsWith('-'))
+  const refspecs = args.slice(1)
+  if (refspecs.some((t) => t === 'main' || /:(refs\/heads\/)?main$/.test(t))) {
+    deny('Запрещено пушить напрямую в main. Создай PR: gh pr create --base main.')
+  }
+  // Без refspec (в т.ч. `git push -u origin`) push уходит в текущую ветку —
+  // с main это тоже пуш в main.
+  if (refspecs.length === 0 && currentBranch() === 'main') {
+    deny('Ты на main: git push без refspec запушил бы в main. Работай в ветке задачи.')
+  }
 }
 
 // 2. Обход проверок
-if (/--no-verify|--no-gpg-sign/.test(cmd)) {
-  deny('Обход хуков (--no-verify / --no-gpg-sign) запрещён. Почини причину, а не проверку.')
+if (
+  /--no-verify|--no-gpg-sign/.test(cmd) ||
+  (/\bgit\s+commit\b/.test(cmd) && /\s-\w*n\b/.test(cmd))
+) {
+  deny(
+    'Обход хуков (--no-verify, включая короткий -n у git commit) и --no-gpg-sign ' +
+      'запрещён. Почини причину, а не проверку. Если -n попал в текст сообщения — ' +
+      'переформулируй сообщение.'
+  )
 }
 
 // 3. Чужое авторство в коммитах

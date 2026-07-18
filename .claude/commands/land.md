@@ -17,8 +17,11 @@ argument-hint: <номер PR> [ещё номера]
      который вернул ревьюер. Потом ревью заново.
    - **ПЕРЕДЕЛАТЬ** → не мержи, покажи мне разбор и спроси, что делать.
 3. После успешного мержа обязательно убери за собой:
-   - `git worktree remove .claude/worktrees/<ветка>`
-   - `gh issue close <N> -c "<итог: что сделано, ссылка на PR>"`
+   - найди worktree ветки: SDK-worktree называются `.claude/worktrees/agent-<id>`,
+     НЕ по имени ветки. `git worktree list --porcelain` → каталог, у которого
+     `branch refs/heads/<ветка>` → `git worktree remove <каталог>`
+     (locked-дерево — `git worktree remove --force`, но только после мержа PR);
+   - `gh issue close <N> -c "<итог: что сделано, ссылка на PR> — Индиго"`
    - убедись, что локальная ветка удалена (`git branch -d <ветка>`)
 4. `git worktree list` — покажи мне, что осиротевших worktree не осталось.
 
