@@ -8,8 +8,9 @@ import { EffectSystem, colorFor } from './effects/effects';
 import { Hud } from './ui/hud';
 import { GuideOverlay } from './ui/guide';
 import { CONFIG } from './config';
-import { boundingBox } from './geometry';
+import { boundingBox, pathLength } from './geometry';
 import { createCombatant, applyDamage, respawn, applyAttack, sizeFactor, damageFor, flightTimeMs } from './combat/combat';
+import { createInk, inkCost, canAfford, spendInk, regenInk } from './combat/ink';
 import { addShield, tickStatuses } from './combat/status';
 import { createDummyAi, tickDummyAi, telegraphElement } from './combat/dummy-ai';
 import { CombatScene } from './combat/scene';
@@ -34,6 +35,7 @@ const strokes: Stroke[] = [];
 // --- combat ---
 let dummy = createCombatant(CONFIG.combat.dummyHp);
 let player = createCombatant(CONFIG.combat.playerHp);
+let playerInk = createInk(CONFIG.combat.ink.max);
 let ai = createDummyAi();
 const scene = new CombatScene();
 const projectiles = new ProjectileSystem();
@@ -62,6 +64,21 @@ window.addEventListener('keydown', (e) => {
 });
 
 function cast(): void {
+  if (strokes.length === 0) return;
+
+  // Стоимость каста в чернилах — по суммарной длине штрихов (Р3).
+  const totalPathPx = strokes.reduce((sum, s) => sum + pathLength(s.points), 0);
+  const cost = inkCost(totalPathPx);
+
+  // Нет чернил на попытку — каст не уходит, рисунок сохраняется (жди регена).
+  if (!canAfford(playerInk, cost)) {
+    hud.showNoInk(cost);
+    return;
+  }
+
+  // Чернила тратятся на любую попытку каста; при осечке они же и сгорают (Р29).
+  playerInk = spendInk(playerInk, cost);
+
   const groups = clusterStrokes(strokes, CONFIG.clusterGapPx);
   const results: MatchResult[] = [];
   for (const group of groups) {
@@ -73,7 +90,9 @@ function cast(): void {
   const spell = parseSpell(results);
 
   if (spell.kind === 'fizzle') {
-    hud.showFizzle(spell.reason);
+    // Осечка сжигает потраченные чернила, без стана (Р29) — заметный эффект.
+    hud.showFizzleBurn(spell.reason, cost);
+    effects.burst(scene.origin.x, scene.origin.y, colorFor('fire'), 60);
     strokes.length = 0;
     return;
   }
@@ -123,8 +142,13 @@ function loop(now: number): void {
   }
   if (playerRespawnAt !== null && now >= playerRespawnAt) {
     player = respawn(player);
+    playerInk = createInk(CONFIG.combat.ink.max); // чернила восстанавливаются с чистого листа (Р28)
     playerRespawnAt = null;
   }
+
+  // регенерация чернил и её отображение
+  playerInk = regenInk(playerInk, CONFIG.combat.ink.regenPerSec, dt);
+  hud.setInk(playerInk.current, playerInk.max);
 
   // тик статусов
   player = { ...player, statuses: tickStatuses(player.statuses, dt) };
