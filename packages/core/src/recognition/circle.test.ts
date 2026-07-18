@@ -31,6 +31,12 @@ describe('isClosingCircle', () => {
     expect(isClosingCircle(idealStroke('fire'))).toBe(false);
   });
 
+  it('спираль (heal) — нет: разомкнута (конец у центра, не у старта) и радиус не постоянен', () => {
+    // heal — не глиф-круг, а осмысленный элемент словаря ($P, glyphs.ts):
+    // важно, чтобы детектор замыкающего круга (эвристика, не $P) не путал их.
+    expect(isClosingCircle(idealStroke('heal'))).toBe(false);
+  });
+
   it('открытая дуга (щит) — нет (не замкнута)', () => {
     expect(isClosingCircle(idealStroke('shield'))).toBe(false);
   });
