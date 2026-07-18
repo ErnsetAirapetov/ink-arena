@@ -3,10 +3,13 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
-    "dev": "vite",
-    "build": "tsc --noEmit && vite build",
-    "preview": "vite preview",
+    "dev": "npm run dev -w @inkarena/client",
+    "build": "npm run build --workspaces --if-present",
+    "preview": "npm run preview -w @inkarena/client",
     "test": "vitest run",
     "test:watch": "vitest"
   },

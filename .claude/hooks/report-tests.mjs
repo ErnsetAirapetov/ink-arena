@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Stop-хук: если в рабочем дереве тронуты src/ или tests/ — прогоняем тесты
+// Stop-хук: если в рабочем дереве тронут packages/ — прогоняем тесты
 // и сообщаем результат. Не блокирует остановку, но не даёт «закончить молча»
 // с красными тестами.
 
@@ -26,7 +26,7 @@ const sh = (c) => execSync(c, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe',
 
 let changed = ''
 try {
-  changed = sh('git status --porcelain -- src tests')
+  changed = sh('git status --porcelain -- packages')
 } catch {
   process.exit(0)
 }
