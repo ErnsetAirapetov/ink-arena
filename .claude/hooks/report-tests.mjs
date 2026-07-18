@@ -5,7 +5,24 @@
 
 import { execSync } from 'node:child_process'
 
-const sh = (c) => execSync(c, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] })
+let raw = ''
+process.stdin.setEncoding('utf8')
+for await (const chunk of process.stdin) raw += chunk
+
+let data = {}
+try {
+  data = JSON.parse(raw) ?? {}
+} catch {
+  process.exit(0)
+}
+// Этот стоп уже блокировался нами — выходим, иначе красные тесты
+// зациклят завершение сессии (стоп → exit 2 → работа → стоп → ...).
+if (data.stop_hook_active) process.exit(0)
+
+// Гоняем там, где реально работает агент (его worktree из cwd входа хука),
+// а не в cwd процесса хука — иначе изменения агента не видны.
+const cwd = data.cwd || process.cwd()
+const sh = (c) => execSync(c, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] })
 
 let changed = ''
 try {
