@@ -4,3 +4,4 @@ dist
 .DS_Store
 .worktrees
 .claude/worktrees/
+.claude/handoff.md
