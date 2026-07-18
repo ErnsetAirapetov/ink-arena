@@ -8,8 +8,8 @@
     "noUnusedParameters": true,
     "skipLibCheck": true,
     "noEmit": true,
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "lib": ["ES2022"],
     "types": ["vitest/globals"]
   },
-  "include": ["packages/*/src"]
+  "include": ["src"]
 }
